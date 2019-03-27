@@ -28,7 +28,7 @@ with open("app/input.txt") as fp:
 
 # determine function from input, summarize is used by default.
 # and get the args and kwargs input for this function
-method_name = input_.get("method","summary")
+method_name = input_.get("method","make_local_iteration")
 method = {
     "node_regression": make_local_iteration,
     "master": calculate_coefficients

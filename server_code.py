@@ -11,7 +11,7 @@ from pytaskmanager.node.FlaskIO import ClientContainerProtocol
 info = lambda msg: sys.stdout.write("info > "+msg+"\n")
 warn = lambda msg: sys.stdout.write("warn > "+msg+"\n")
 
-def calculate_coefficients(token, matrices, scores, deviances, samples):
+def calculate_coefficients(token, beta = [0, 0, 0, 0]):
 
     info("Setup server communication client")
     client = ClientContainerProtocol(
@@ -26,7 +26,6 @@ def calculate_coefficients(token, matrices, scores, deviances, samples):
     max_iterations = math.pow(10, 10)
     deviance_previous_iteration = math.pow(10, 10)
     deviance = 0
-    beta = [0, 0, 0, 0]
 
     while iterations_number == 0 or \
             (abs(deviance - deviance_previous_iteration) > epsilon and
