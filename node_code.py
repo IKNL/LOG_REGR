@@ -7,7 +7,7 @@ def node_log_regr(data_file, coefficients_file, site_number):
     #data.DC<-read.table(file=DC2.data.file, sep=",",header=T)
     #Strip out header row
     #data.DC<-data.DC[,-1]
-    node_data = pd.read_csv(data_file, sep = ",")
+    node_data = pd.read_csv(os.environ["DATABASE_URI"], sep = ",")
 
 
     #Calculate number of subjects available in the current study
