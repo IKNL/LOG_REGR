@@ -3,7 +3,7 @@ import numpy as np
 import os
 
 
-def node_log_regr(coefficients):
+def make_local_iteration(coefficients):
 
 
     #read database file
@@ -77,6 +77,6 @@ data_file = "C:/project/data/Study.1.csv"
 coefficients_file = "C:/project/data/AC/beta.vect.next.csv"
 for site_number in range(1, 7):
     data_file = "C:/project/data/Study." + str(site_number) + ".csv"
-    node_log_regr(data_file = data_file, coefficients_file = coefficients_file,
-                  site_number = site_number)
+    make_local_iteration(data_file = data_file, coefficients_file = coefficients_file,
+                         site_number = site_number)
 

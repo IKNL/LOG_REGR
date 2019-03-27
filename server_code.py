@@ -9,6 +9,7 @@ from pytaskmanager.node.FlaskIO import ClientContainerProtocol
 
 # loggers
 info = lambda msg: sys.stdout.write("info > "+msg+"\n")
+warn = lambda msg: sys.stdout.write("warn > "+msg+"\n")
 
 def calculate_coefficients(token, matrices, scores, deviances, samples):
 

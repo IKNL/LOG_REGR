@@ -18,7 +18,8 @@ import json
 import os
 import sys
 
-from logistic_regression import master, summary, info, warn
+from server_code import calculate_coefficients, info, warn
+from node_code import make_local_iteration
 
 # read input from the mounted inputfile
 info("Reading input")
@@ -29,8 +30,8 @@ with open("app/input.txt") as fp:
 # and get the args and kwargs input for this function
 method_name = input_.get("method","summary")
 method = {
-    "summary": summary,
-    "master": master
+    "node_regression": make_local_iteration,
+    "master": calculate_coefficients
 }.get(method_name)
 if not method:
     warn(f"method name={method_name} not found!\n")
