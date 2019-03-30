@@ -86,18 +86,3 @@ def calculate_coefficients(token, beta = [0, 0, 0, 0]):
     info("Total number of iterations is" + iterations_number)
     return beta
 
-
-matrices = []
-scores = []
-deviances = []
-samples = []
-for node in range(1, 7):
-    matrix = np.loadtxt('C:/project/data/AC/info_matrix' + str(node) + ".csv")
-    matrices.append(matrix)
-    score = np.loadtxt('C:/project/data/AC/score_vector' + str(node) + ".csv")
-    scores.append(score)
-    deviance = np.loadtxt('C:/project/data/AC/deviance' + str(node) + ".csv")
-    deviances.append(deviance)
-    sample = np.loadtxt('C:/project/data/AC/samples' + str(node) + ".csv")
-    samples.append(sample)
-calclulate_beta(matrices, scores, deviances, samples)

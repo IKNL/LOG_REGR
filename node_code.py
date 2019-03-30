@@ -1,10 +1,11 @@
 import pandas as pd
 import numpy as np
 import os
+import sys
 
 
 def make_local_iteration(coefficients):
-
+    info = lambda msg: sys.stdout.write("info > " + msg + "\n")
 
     #read database file
     node_data = pd.read_csv(os.environ["DATABASE_URI"], sep = ",")
@@ -30,17 +31,17 @@ def make_local_iteration(coefficients):
     # Calculate linear predictors from observed covariate values
     # and elements of
     # current beta vector
-    linear_predictor = np.dot(design_matrix, beta)
+    logit = np.dot(design_matrix, beta)
 
 
     # Apply inverse logistic transformation
-    predictor_exp = np.exp(linear_predictor)
-    mu = predictor_exp/(1 + predictor_exp)
+    odds_ratio = np.exp(logit)
+    probability = odds_ratio / (1 + odds_ratio)
 
     # Derive variance function and diagonal elements for
     # weight matrix (using squared
     # first differential of link function)
-    variance = mu * (1 - mu)
+    variance = probability * (1 - probability)
     link_function_differential = 1 / (variance)
     weight_matrix = np.diagflat(variance)
 
@@ -50,7 +51,7 @@ def make_local_iteration(coefficients):
 
     #Derive u terms for score vector
     outcome = np.matrix(node_data["CC"].values).T
-    u_terms = np.multiply((outcome - mu), link_function_differential)
+    u_terms = np.multiply((outcome - probability), link_function_differential)
 
     #Calculate score vector
     score_vect = np.dot(np.dot(design_matrix.T, weight_matrix), u_terms)
@@ -60,23 +61,19 @@ def make_local_iteration(coefficients):
     # model, because that will cancel out in calculating the change in deviance from one
     # iteration to the next (Dev.total – Dev.old [see below]) because the element relating
     # to the saturated model will be the same at every iteration).
-    log_likelihood = outcome.T * np.log(mu) + (1 - outcome).T * np.log(1 - mu)
-    deviance = -2 * log_likelihood
-    np.savetxt('C:/project/data/AC/info_matrix' + str(site_number) + ".csv", info_matrix)
-    np.savetxt('C:/project/data/AC/score_vector' + str(site_number) + ".csv", score_vect)
-    np.savetxt('C:/project/data/AC/deviance' + str(site_number) + ".csv", deviance)
-    np.savetxt('C:/project/data/AC/samples' + str(site_number) + ".csv", [rows_number])
+    log_likelihood = np.log(probability) * outcome + np.log(1 - probability) * (1 - outcome)
+    deviance = -2 * log_likelihood.item()
+
+    #np.savetxt('C:/project/data/AC/info_matrix' + str(site_number) + ".csv", info_matrix)
+    #np.savetxt('C:/project/data/AC/score_vector' + str(site_number) + ".csv", score_vect)
+    #np.savetxt('C:/project/data/AC/deviance' + str(site_number) + ".csv", deviance)
+    #np.savetxt('C:/project/data/AC/samples' + str(site_number) + ".csv", [rows_number])
+
+    #ToDO add dimensions of array if it is needed for array reconstruction
     return{
-        "info_matrix": info_matrix,
-        "score_vector": score_vect,
+        "info_matrix": info_matrix.tolist(),
+        "score_vector": score_vect.tolist(),
         "deviance": deviance,
         "rows_number": rows_number
     }
-
-data_file = "C:/project/data/Study.1.csv"
-coefficients_file = "C:/project/data/AC/beta.vect.next.csv"
-for site_number in range(1, 7):
-    data_file = "C:/project/data/Study." + str(site_number) + ".csv"
-    make_local_iteration(data_file = data_file, coefficients_file = coefficients_file,
-                         site_number = site_number)
 
