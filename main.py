@@ -50,6 +50,8 @@ if method_name == "master":
 else:
     output = method(*args, **kwargs)
 
+info("Output is:")
+info(str(output))
 # write output to mounted output file
 info("Writing output")
 with open("app/output.txt", 'w') as fp:
