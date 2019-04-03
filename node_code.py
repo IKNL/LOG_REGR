@@ -25,16 +25,10 @@ def make_local_iteration(coefficients, data_file=""):
                                node_data["snp"]], axis=1).values
 
 
-    #Load the current value of the beta vector
-    # (vector of regression coefficients) from its
-    #location on the AC computer (stored during activation of block 2 of R code)
-    beta = coefficients
-
-
     # Calculate linear predictors from observed covariate values
     # and elements of
     # current beta vector
-    logit = np.dot(design_matrix, beta)
+    logit = np.dot(design_matrix, coefficients)
 
 
     # Apply inverse logistic transformation
