@@ -37,7 +37,7 @@ def calculate_coefficients(token, beta = [0, 0, 0, 0]):
         # define the input for the summary algorithm
         info("Defining input paramaeters")
         input_ = {
-            "method": "summary",
+            "method": "node_regression",
             "args": [],
             "kwargs": {
                 "coefficients": beta

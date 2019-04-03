@@ -4,10 +4,14 @@ import os
 import sys
 info = lambda msg: sys.stdout.write("info > " + msg + "\n")
 
-def make_local_iteration(coefficients):
+def make_local_iteration(coefficients, data_file=""):
 
+    separator = ","
     #read database file
-    node_data = pd.read_csv(os.environ["DATABASE_URI"], sep=",")
+    if not data_file:
+        node_data = pd.read_csv(os.environ["DATABASE_URI"], sep=separator)
+    else:
+        node_data = pd.read_csv(data_file, sep=separator)
 
 
     #Calculate number of subjects available in the current study
