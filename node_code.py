@@ -3,6 +3,7 @@ import numpy as np
 import os
 import sys
 info = lambda msg: sys.stdout.write("info > " + msg + "\n")
+warn = lambda msg: sys.stdout.write("warn > " + msg + "\n")
 
 def make_local_iteration(coefficients, data_file=""):
 
@@ -30,7 +31,6 @@ def make_local_iteration(coefficients, data_file=""):
     # current beta vector
     logit = np.dot(design_matrix, coefficients)
 
-
     # Apply inverse logistic transformation
     odds_ratio = np.exp(logit)
     probability = odds_ratio / (1 + odds_ratio)
@@ -38,7 +38,7 @@ def make_local_iteration(coefficients, data_file=""):
     # Derive variance function and diagonal elements for
     # weight matrix (using squared
     # first differential of link function)
-    variance = probability * (1 - probability)
+    variance = np.multiply(probability, (1 - probability))
     link_function_differential = 1 / (variance)
     weight_matrix = np.diagflat(variance)
 
@@ -48,8 +48,8 @@ def make_local_iteration(coefficients, data_file=""):
     info("Info matrix is: ")
     info(str(info_matrix))
     #Derive u terms for score vector
-    outcome = node_data["CC"].values
-    u_terms = np.multiply((outcome - probability), link_function_differential)
+    outcome = np.matrix(node_data["CC"].values)
+    u_terms = np.multiply((outcome.T - probability), link_function_differential)
     #Calculate score vector
     score_vect = np.dot(np.dot(design_matrix.T, weight_matrix), u_terms)
     info("Score vector is: ")
@@ -59,7 +59,8 @@ def make_local_iteration(coefficients, data_file=""):
     # model, because that will cancel out in calculating the change in deviance from one
     # iteration to the next (Dev.total – Dev.old [see below]) because the element relating
     # to the saturated model will be the same at every iteration).
-    log_likelihood = np.dot(np.log(probability), outcome.T) + np.dot(np.log(1 - probability), (1 - outcome).T)
+    log_likelihood = (np.dot(outcome, np.log(probability)) + np.dot((1 - outcome), np.log(1 - probability))).item(0)
+    warn(str(log_likelihood))
     deviance = -2 * log_likelihood
     #ToDO add dimensions of array if it is needed for array reconstruction
     return{

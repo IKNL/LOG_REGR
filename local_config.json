@@ -1,0 +1,13 @@
+{
+  "nodes":{
+    "number_of_nodes" : 6,
+    "nodes_files": [
+      "C:\\project\\data\\Study.1.csv",
+      "C:\\project\\data\\Study.2.csv",
+      "C:\\project\\data\\Study.3.csv",
+      "C:\\project\\data\\Study.4.csv",
+      "C:\\project\\data\\Study.5.csv",
+      "C:\\project\\data\\Study.6.csv"
+    ]
+  }
+}
