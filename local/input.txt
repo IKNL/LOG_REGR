@@ -2,7 +2,10 @@
     "method":"node_regression",
     "args": [],
     "kwargs": {
-        "coefficients": [0, 0, 0, 0]
-    }
+        "coefficients": [0, 0, 0, 0],
+        "columns": [],
+        "outcome_variable": "3_years_death",
+        "separator": ","
+    },
 }
 

@@ -1,13 +1,10 @@
 {
   "nodes":{
-    "number_of_nodes" : 6,
+    "number_of_nodes" : 2,
+    "number_of_parameters" : 16,
     "nodes_files": [
-      "C:\\project\\data\\Study.1.csv",
-      "C:\\project\\data\\Study.2.csv",
-      "C:\\project\\data\\Study.3.csv",
-      "C:\\project\\data\\Study.4.csv",
-      "C:\\project\\data\\Study.5.csv",
-      "C:\\project\\data\\Study.6.csv"
+      "C:\\project\\thyroid_data\\NL_sample.csv",
+      "C:\\project\\thyroid_data\\data2.csv"
     ]
   }
 }
