@@ -6,7 +6,7 @@ from scipy.optimize import minimize
 
 
 class Central_Node(Node):
-    nodes_results = []
+    gradients_all_sites = []
     current_coefficients = []
     global_gradients = []
     
@@ -30,15 +30,16 @@ class Central_Node(Node):
     def get_node_results(self):
         for file_number in range(0, len(info["files"])):
             node = Node(data_file=info["files"][file_number], outcome_variable=self.outcome_variable)
-            self.nodes_results.append(node.calculate_log_likelihood_gradient(self.current_coefficients))
+            self.gradients_all_sites.append(node.calculate_log_likelihood_gradient(self.current_coefficients))
 
     def calculate_global_gradient(self):
         self.get_node_results()
-        nodes_likelihood_sum = np.zeros((len(self.nodes_results[0]), 1))
-        for node_results in self.nodes_results:
-            nodes_likelihood_sum = np.add(nodes_likelihood_sum, node_results)
-        return nodes_likelihood_sum / len(self.nodes_results) \
-               - self.calculate_log_likelihood_gradient(self.current_coefficients)
+        central_gradient = self.calculate_log_likelihood_gradient(self.current_coefficients)
+        self.gradients_all_sites.append(central_gradient)
+        gradients_sum = np.zeros((len(self.gradients_all_sites[0]), 1))
+        for node_results in self.gradients_all_sites:
+            gradients_sum = np.add(gradients_sum, node_results)
+        return gradients_sum / len(self.gradients_all_sites) - central_gradient
 
     def calculate_surrogare_likelihood(self, coefficients):
         return np.dot(coefficients.T, self.global_gradient) + self.calculate_log_likelihood(coefficients)
