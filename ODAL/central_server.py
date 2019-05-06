@@ -43,8 +43,8 @@ class Central_Node(Node):
     def calculate_surrogare_likelihood(self, coefficients):
         return np.dot(coefficients.T, self.global_gradient) + self.calculate_log_likelihood(coefficients)
 
-    def get_negative_surrogate_likelihood(self, global_gradient):
-        return -self.calculate_surrogare_likelihood(global_gradient)
+    def get_negative_surrogate_likelihood(self, coefficients):
+        return -self.calculate_surrogare_likelihood(coefficients)
 
     def get_global_coefficients(self):
         new_coefficients = self.get_optimized_coefficients()
