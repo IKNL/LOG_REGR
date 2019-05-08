@@ -27,7 +27,9 @@ class Node:
     def get_logit(self, coefficients):
         return np.dot(self.covariates, coefficients)
 
-    #do not init coefficients with 0
+    # do not init coefficients with 0
+    # gradient is calculate by formula below formula (3)
+    # test with manual data exists
     def calculate_log_likelihood_gradient(self, coefficients):
         logit = self.get_logit(coefficients)
         logit_exp = np.exp(logit)
