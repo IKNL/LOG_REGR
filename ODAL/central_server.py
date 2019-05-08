@@ -51,8 +51,14 @@ class Central_Node(Node):
             coefficients = np.expand_dims(coefficients, axis=1)
         return -self.calculate_surrogare_likelihood(coefficients)
 
+
+    #minimize function is used since maximized function is not present among optimization methods
+    #therefore don't be surprised to see that I change the original approach
+    #instead of log-likelihood maximization I minimize -log-likelihood
     def get_global_coefficients(self):
+        #get the best coefficients based on only central-server data
         central_site_optimal_coefficients = self.get_optimized_coefficients()
+        #change the dimension of coefficients vector. I programmed it to be n*1, but minimize
         self.current_coefficients = central_site_optimal_coefficients[:, None]
         self.global_gradient = self.calculate_global_gradient()
         for iteration in range(0, 10):
