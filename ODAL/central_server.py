@@ -19,13 +19,13 @@ class Central_Node(Node):
         return results["x"]
 
     def get_likelihood_negative_sign(self, coefficients):
+        coefficients = np.expand_dims(coefficients, axis=1)
         likelihood = self.calculate_log_likelihood(coefficients)
         return -likelihood
 
     def calculate_log_likelihood(self, coefficients):
         logit = self.get_logit(coefficients)
-        return (np.asscalar(np.dot(np.transpose(self.outcomes), logit)) - np.sum(np.log(1 + np.exp(logit)))) \
-               / len(self.outcomes)
+        return (np.asscalar(np.dot(np.transpose(self.outcomes), logit)) - np.sum(np.log(1 + np.exp(logit)))) / len(self.outcomes)
 
     def get_node_results(self):
         for file_number in range(0, len(info["files"])):
@@ -36,23 +36,27 @@ class Central_Node(Node):
         self.get_node_results()
         central_gradient = self.calculate_log_likelihood_gradient(self.current_coefficients)
         self.gradients_all_sites.append(central_gradient)
-        gradients_sum = np.zeros((len(self.gradients_all_sites[0]), 1))
+        gradients_sum = np.zeros((self.covariates.shape[1], 1))
         for node_results in self.gradients_all_sites:
             gradients_sum = np.add(gradients_sum, node_results)
-        return gradients_sum / len(self.gradients_all_sites) - central_gradient
+        return (gradients_sum / len(self.gradients_all_sites) - central_gradient)
 
     def calculate_surrogare_likelihood(self, coefficients):
-        return np.dot(coefficients.T, self.global_gradient) + self.calculate_log_likelihood(coefficients)
+        return np.asscalar(np.dot(coefficients.T, self.global_gradient)) + self.calculate_log_likelihood(coefficients)
 
     def get_negative_surrogate_likelihood(self, coefficients):
+        if(coefficients.shape[0] == 1):
+            coefficients = np.transpose(coefficients)
+        else:
+            coefficients = np.expand_dims(coefficients, axis=1)
         return -self.calculate_surrogare_likelihood(coefficients)
 
     def get_global_coefficients(self):
-        new_coefficients = self.get_optimized_coefficients()
-        self.current_coefficients = new_coefficients.reshape(new_coefficients.shape + (1,))
+        central_site_optimal_coefficients = self.get_optimized_coefficients()
+        self.current_coefficients = central_site_optimal_coefficients[:, None]
         self.global_gradient = self.calculate_global_gradient()
         for iteration in range(0, 10):
-            updated_coefficients = minimize(self.get_negative_surrogate_likelihood, self.current_coefficients, method='BFGS',
+            print("Current coefs are: {}".format(self.current_coefficients))
+            self.current_coefficients = minimize(self.get_negative_surrogate_likelihood, self.current_coefficients, method='BFGS',
                                             options={"disp": True})["x"]
-            self.current_coefficients = updated_coefficients.reshape(updated_coefficients.shape + (1,))
-            print(self.current_coefficients)
+        print(self.current_coefficients)
