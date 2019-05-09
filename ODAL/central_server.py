@@ -16,13 +16,8 @@ class Central_Node(Node):
 
     #calculated using local data and using MLE function
     def get_optimized_coefficients(self):
-        results = minimize(self.get_likelihood_negative_sign, self.current_coefficients, method='BFGS', options={"disp": True})
+        results = minimize(self.calculate_log_likelihood, self.current_coefficients, method='BFGS', options={"disp": True})
         return results["x"]
-
-    def get_likelihood_negative_sign(self, coefficients):
-        coefficients = np.expand_dims(coefficients, axis=1)
-        likelihood = self.calculate_log_likelihood(coefficients)
-        return likelihood
 
     def calculate_log_likelihood(self, coefficients):
         logit = self.get_logit(coefficients)
@@ -47,27 +42,14 @@ class Central_Node(Node):
 
     def calculate_surrogare_likelihood(self, coefficients):
         #calculation according to formula 3
-        return self.calculate_log_likelihood(coefficients) + np.asscalar(np.dot(coefficients.T, self.global_gradient))
-
-    def get_negative_surrogate_likelihood(self, coefficients):
-        #it was some bug with weirdly changing dimension, so it is a temporary fix for it now
-        #anyway, as you can see I transform coefs to the n*1 form
-        if(coefficients.shape[0] == 1):
-            coefficients = np.transpose(coefficients)
-        else:
-            coefficients = np.expand_dims(coefficients, axis=1)
-        return self.calculate_surrogare_likelihood(coefficients)
-
+        return self.calculate_log_likelihood(coefficients) + np.asscalar(np.dot(coefficients, self.global_gradient))
 
     #minimize function is used since maximized function is not present among optimization methods
     #therefore don't be surprised to see that I change the original approach
     #instead of log-likelihood maximization I minimize -log-likelihood
     def get_global_coefficients(self):
         #get the best coefficients based on only central-server data
-        central_site_optimal_coefficients = self.get_optimized_coefficients()
-        #change the dimension of coefficients vector. I programmed it to be n*1, but minimize
-        #function make from it 1*n
-        self.current_coefficients = central_site_optimal_coefficients[:, None]
+        self.current_coefficients = self.get_optimized_coefficients()
         #it calculates the gradient term which is inside the bracket in formula (3) Take into account that it required to
         #be calculated only once
         self.global_gradient = self.calculate_global_gradient()
@@ -75,6 +57,6 @@ class Central_Node(Node):
             print("Current coefs are: {}".format(self.current_coefficients))
             #make an update as in formula (3), gradient is saved into class variable and used inside hte formula
             #coefficients are passed as parameter because they would be optimized inside the code
-            self.current_coefficients = minimize(self.get_negative_surrogate_likelihood, self.current_coefficients, method='BFGS',
+            self.current_coefficients = minimize(self.calculate_surrogare_likelihood, self.current_coefficients, method='BFGS',
                                             options={"disp": True})["x"]
         print(self.current_coefficients)
