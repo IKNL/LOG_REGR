@@ -22,12 +22,12 @@ class Central_Node(Node):
     def get_likelihood_negative_sign(self, coefficients):
         coefficients = np.expand_dims(coefficients, axis=1)
         likelihood = self.calculate_log_likelihood(coefficients)
-        return -likelihood
+        return likelihood
 
     def calculate_log_likelihood(self, coefficients):
         logit = self.get_logit(coefficients)
         #uses formula 2 for calculations
-        return (np.asscalar(np.dot(np.transpose(self.outcomes), logit)) - np.sum(np.log(1 + np.exp(logit)))) / len(self.outcomes)
+        return (np.sum(np.log(1 + np.exp(logit)))- np.asscalar(np.dot(np.transpose(self.outcomes), logit))) / len(self.outcomes)
 
     def get_node_results(self):
         for file_number in range(0, len(info["files"])):
@@ -43,7 +43,7 @@ class Central_Node(Node):
         for node_results in self.gradients_all_sites:
             gradients_sum = np.add(gradients_sum, node_results)
         #uses part in brackets of formula (3) for calculations
-        return (gradients_sum / len(self.gradients_all_sites) - central_gradient)
+        return central_gradient - (gradients_sum / len(self.gradients_all_sites))
 
     def calculate_surrogare_likelihood(self, coefficients):
         #calculation according to formula 3
@@ -56,7 +56,7 @@ class Central_Node(Node):
             coefficients = np.transpose(coefficients)
         else:
             coefficients = np.expand_dims(coefficients, axis=1)
-        return -self.calculate_surrogare_likelihood(coefficients)
+        return self.calculate_surrogare_likelihood(coefficients)
 
 
     #minimize function is used since maximized function is not present among optimization methods
