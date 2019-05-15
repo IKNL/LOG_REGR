@@ -13,6 +13,7 @@ class Central_Node(Node):
     def __init__(self, data_file, outcome_variable):
         super().__init__(data_file, outcome_variable)
         self.current_coefficients = np.zeros((self.covariates.shape[1], 1))
+        self.global_gradient = np.zeros((self.covariates.shape[1], 1))
 
     # calculated using local data and using MLE function
     def get_optimized_coefficients(self):
@@ -31,6 +32,7 @@ class Central_Node(Node):
             self.gradients_all_sites.append(node.calculate_log_likelihood_gradient(coefficients))
 
     def calculate_global_gradient(self, coefficients):
+        self.gradients_all_sites = []
         # get gradients from all nodes
         self.get_node_results(coefficients)
         central_gradient = self.calculate_log_likelihood_gradient(coefficients)
@@ -39,7 +41,7 @@ class Central_Node(Node):
         for node_results in self.gradients_all_sites:
             gradients_sum = np.add(gradients_sum, node_results)
         # uses part in brackets of formula (3) for calculations
-        return central_gradient - (gradients_sum / len(self.gradients_all_sites))
+        self.global_gradient =  central_gradient - (gradients_sum / len(self.gradients_all_sites))
 
     def calculate_surrogare_likelihood(self, coefficients):
         # calculation according to formula 3
@@ -47,7 +49,7 @@ class Central_Node(Node):
 
     def get_vectors_difference(self, vector1, vector2):
         if len(vector1) == len(vector2):
-            return sum((vector1 - vector2) ** 2)
+            return pow(sum((vector1 - vector2) ** 2), 0.5)
         else:
             return np.nan
 
@@ -71,17 +73,15 @@ class Central_Node(Node):
 
         # it calculates the gradient term which is inside the bracket in formula (3) Take into account that it required to
         # be calculated only once
-        self.global_gradient = self.calculate_global_gradient(self.current_coefficients)
-        max_iterations = 10
+        max_iterations = 100
         max_delta = 1e-3
-        # erase the file content if there was something there
-        for iteration in range(0, max_iterations):
-            # make an update as in formula (3), gradient is saved into class variable and used inside hte formula
-            # coefficients are passed as parameter because they would be optimized inside the code
-            previous_coefficients = self.current_coefficients
-            self.current_coefficients = minimize(self.calculate_surrogare_likelihood, self.current_coefficients, method='L-BFGS-B')["x"]
-
-            with open(log_file, "a+") as file:
+        with open(log_file, "a") as file:
+            for iteration in range(0, max_iterations):
+                self.calculate_global_gradient(self.current_coefficients)
+                # make an update as in formula (3), gradient is saved into class variable and used inside hte formula
+                # coefficients are passed as parameter because they would be optimized inside the code
+                previous_coefficients = self.current_coefficients
+                self.current_coefficients = minimize(self.calculate_surrogare_likelihood, self.current_coefficients, method='L-BFGS-B')["x"]
                 file.write("Coefficients after iteration {} are: {}\n".format(iteration + 1, self.current_coefficients))
-            if self.get_vectors_difference(self.current_coefficients, previous_coefficients) < max_delta:
-                break
+                if self.get_vectors_difference(self.current_coefficients, previous_coefficients) < max_delta:
+                    break
