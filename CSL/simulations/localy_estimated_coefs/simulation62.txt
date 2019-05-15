@@ -1,0 +1,3 @@
+Central server contains 6300 number of records
+First node contains 2292 number of records
+Second node contains 2293 number of records
