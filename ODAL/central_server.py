@@ -70,4 +70,3 @@ class Central_Node(Node):
             self.current_coefficients = \
             minimize(self.calculate_surrogare_likelihood, self.current_coefficients, method='BFGS',
                      options={"disp": True})["x"]
-        print(self.current_coefficients)
