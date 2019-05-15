@@ -16,8 +16,7 @@ class Central_Node(Node):
 
     # calculated using local data and using MLE function
     def get_optimized_coefficients(self):
-        results = minimize(self.calculate_log_likelihood, self.current_coefficients, method='BFGS',
-                           options={"disp": True})
+        results = minimize(self.calculate_log_likelihood, self.current_coefficients, method='BFGS')
         return results["x"]
 
     def calculate_log_likelihood(self, coefficients):
@@ -57,7 +56,7 @@ class Central_Node(Node):
     # instead of log-likelihood maximization I minimize -log-likelihood
     def calculate_global_coefficients(self, log_file):
         # get the best coefficients based on only central-server data
-        precalculated_coefs = True
+        precalculated_coefs = False
         pooled_coefs = np.array([0.0216358, 0.22843066, 0.36183711, 0.86910588, 3.50070821, 3.00057885,
                          1.82560385, 0.53803323, 0.45747878, 0.27306922, 1.1601112, -0.11292471,
                          0.62010708, 0.32833225, 0.27338948, -6.33305999])
@@ -80,7 +79,7 @@ class Central_Node(Node):
             # make an update as in formula (3), gradient is saved into class variable and used inside hte formula
             # coefficients are passed as parameter because they would be optimized inside the code
             previous_coefficients = self.current_coefficients
-            self.current_coefficients = minimize(self.calculate_surrogare_likelihood, self.current_coefficients, method='BFGS')["x"]
+            self.current_coefficients = minimize(self.calculate_surrogare_likelihood, self.current_coefficients, method='L-BFGS-B')["x"]
 
             with open(log_file, "a+") as file:
                 file.write("Coefficients after iteration {} are: {}\n".format(iteration + 1, self.current_coefficients))
