@@ -33,4 +33,4 @@ class Node:
     def calculate_log_likelihood_gradient(self, coefficients):
         logit = self.get_logit(coefficients)
         logit_exp = np.exp(logit)
-        return np.dot(self.covariates.T, (self.outcomes - logit_exp / (1 - logit_exp))) / len(self.outcomes)
+        return np.dot(self.covariates.T, (self.outcomes - logit_exp / (1 + logit_exp))) / len(self.outcomes)

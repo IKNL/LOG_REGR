@@ -16,8 +16,7 @@ class Central_Node(Node):
 
     # calculated using local data and using MLE function
     def get_optimized_coefficients(self):
-        results = minimize(self.calculate_log_likelihood, self.current_coefficients, method='BFGS',
-                           options={"disp": True})
+        results = minimize(self.calculate_log_likelihood, self.current_coefficients, method='BFGS')
         return results["x"]
 
     def calculate_log_likelihood(self, coefficients):
@@ -46,12 +45,18 @@ class Central_Node(Node):
         # calculation according to formula 3
         return self.calculate_log_likelihood(coefficients) + np.asscalar(np.dot(coefficients, self.global_gradient))
 
+    def get_vectors_difference(self, vector1, vector2):
+        if len(vector1) == len(vector2):
+            return sum((vector1 - vector2) ** 2)
+        else:
+            return np.nan
+
     # minimize function is used since maximized function is not present among optimization methods
     # therefore don't be surprised to see that I change the original approach
     # instead of log-likelihood maximization I minimize -log-likelihood
-    def get_global_coefficients(self):
+    def calculate_global_coefficients(self, log_file):
         # get the best coefficients based on only central-server data
-        precalculated_coefs = True
+        precalculated_coefs = False
         pooled_coefs = np.array([0.0216358, 0.22843066, 0.36183711, 0.86910588, 3.50070821, 3.00057885,
                          1.82560385, 0.53803323, 0.45747878, 0.27306922, 1.1601112, -0.11292471,
                          0.62010708, 0.32833225, 0.27338948, -6.33305999])
@@ -60,13 +65,23 @@ class Central_Node(Node):
             self.current_coefficients = pooled_coefs
         else:
             self.current_coefficients = self.get_optimized_coefficients()
+
+        with open(log_file, "a+") as file:
+            file.write("Coefficients before iterations start are: {}\n".format(self.current_coefficients))
+
         # it calculates the gradient term which is inside the bracket in formula (3) Take into account that it required to
         # be calculated only once
         self.global_gradient = self.calculate_global_gradient()
-        for iteration in range(0, 10):
-            print("Current coefs are: {}".format(self.current_coefficients))
+        max_iterations = 10
+        max_delta = 1e-3
+        # erase the file content if there was something there
+        for iteration in range(0, max_iterations):
             # make an update as in formula (3), gradient is saved into class variable and used inside hte formula
             # coefficients are passed as parameter because they would be optimized inside the code
-            self.current_coefficients = \
-            minimize(self.calculate_surrogare_likelihood, self.current_coefficients, method='BFGS',
-                     options={"disp": True})["x"]
+            previous_coefficients = self.current_coefficients
+            self.current_coefficients = minimize(self.calculate_surrogare_likelihood, self.current_coefficients, method='L-BFGS-B')["x"]
+
+            with open(log_file, "a+") as file:
+                file.write("Coefficients after iteration {} are: {}\n".format(iteration + 1, self.current_coefficients))
+            if self.get_vectors_difference(self.current_coefficients, previous_coefficients) < max_delta:
+                break
