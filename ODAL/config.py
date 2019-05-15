@@ -1,6 +1,6 @@
 info = {
     "files": [
-        "data/full_data2.csv",
-        "data/full_data3.csv"
+        "data/first_file.csv",
+        "data/second_file.csv"
     ]
 }
