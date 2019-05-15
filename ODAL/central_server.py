@@ -6,7 +6,7 @@ from scipy.optimize import minimize
 
 
 class Central_Node(Node):
-    nodes_results = []
+    gradients_all_sites = []
     current_coefficients = []
     global_gradients = []
     
@@ -14,44 +14,49 @@ class Central_Node(Node):
         super().__init__(data_file, outcome_variable)
         self.current_coefficients = np.zeros((self.covariates.shape[1], 1))
 
+    #calculated using local data and using MLE function
     def get_optimized_coefficients(self):
-        results = minimize(self.get_likelihood_negative_sign, self.current_coefficients, method='BFGS', options={"disp": True})
+        results = minimize(self.calculate_log_likelihood, self.current_coefficients, method='BFGS', options={"disp": True})
         return results["x"]
-
-    def get_likelihood_negative_sign(self, coefficients):
-        likelihood = self.calculate_log_likelihood(coefficients)
-        return -likelihood
 
     def calculate_log_likelihood(self, coefficients):
         logit = self.get_logit(coefficients)
-        return (np.asscalar(np.dot(np.transpose(self.outcomes), logit)) - np.sum(np.log(1 + np.exp(logit)))) \
-               / len(self.outcomes)
+        #uses formula 2 for calculations
+        return (np.sum(np.log(1 + np.exp(logit)))- np.asscalar(np.dot(np.transpose(self.outcomes), logit))) / len(self.outcomes)
 
     def get_node_results(self):
         for file_number in range(0, len(info["files"])):
             node = Node(data_file=info["files"][file_number], outcome_variable=self.outcome_variable)
-            self.nodes_results.append(node.calculate_log_likelihood_gradient(self.current_coefficients))
+            self.gradients_all_sites.append(node.calculate_log_likelihood_gradient(self.current_coefficients))
 
     def calculate_global_gradient(self):
+        #get gradients from all nodes
         self.get_node_results()
-        nodes_likelihood_sum = np.zeros((len(self.nodes_results[0]), 1))
-        for node_results in self.nodes_results:
-            nodes_likelihood_sum = np.add(nodes_likelihood_sum, node_results)
-        return nodes_likelihood_sum / len(self.nodes_results) \
-               - self.calculate_log_likelihood_gradient(self.current_coefficients)
+        central_gradient = self.calculate_log_likelihood_gradient(self.current_coefficients)
+        self.gradients_all_sites.append(central_gradient)
+        gradients_sum = np.zeros((self.covariates.shape[1], 1))
+        for node_results in self.gradients_all_sites:
+            gradients_sum = np.add(gradients_sum, node_results)
+        #uses part in brackets of formula (3) for calculations
+        return central_gradient - (gradients_sum / len(self.gradients_all_sites))
 
     def calculate_surrogare_likelihood(self, coefficients):
-        return np.dot(coefficients.T, self.global_gradient) + self.calculate_log_likelihood(coefficients)
+        #calculation according to formula 3
+        return self.calculate_log_likelihood(coefficients) + np.asscalar(np.dot(coefficients, self.global_gradient))
 
-    def get_negative_surrogate_likelihood(self, coefficients):
-        return -self.calculate_surrogare_likelihood(coefficients)
-
+    #minimize function is used since maximized function is not present among optimization methods
+    #therefore don't be surprised to see that I change the original approach
+    #instead of log-likelihood maximization I minimize -log-likelihood
     def get_global_coefficients(self):
-        new_coefficients = self.get_optimized_coefficients()
-        self.current_coefficients = new_coefficients.reshape(new_coefficients.shape + (1,))
+        #get the best coefficients based on only central-server data
+        self.current_coefficients = self.get_optimized_coefficients()
+        #it calculates the gradient term which is inside the bracket in formula (3) Take into account that it required to
+        #be calculated only once
         self.global_gradient = self.calculate_global_gradient()
         for iteration in range(0, 10):
-            updated_coefficients = minimize(self.get_negative_surrogate_likelihood, self.current_coefficients, method='BFGS',
+            print("Current coefs are: {}".format(self.current_coefficients))
+            #make an update as in formula (3), gradient is saved into class variable and used inside hte formula
+            #coefficients are passed as parameter because they would be optimized inside the code
+            self.current_coefficients = minimize(self.calculate_surrogare_likelihood, self.current_coefficients, method='BFGS',
                                             options={"disp": True})["x"]
-            self.current_coefficients = updated_coefficients.reshape(updated_coefficients.shape + (1,))
-            print(self.current_coefficients)
+        print(self.current_coefficients)
