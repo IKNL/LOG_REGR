@@ -23,6 +23,7 @@ class Node:
 
     def set_data(self, data_file):
         self.data = pd.read_csv(data_file)
+        self.data["leeft"] = self.data["leeft"] / 100
 
     def get_logit(self, coefficients):
         return np.dot(self.covariates, coefficients[None].T)
@@ -33,4 +34,4 @@ class Node:
     def calculate_log_likelihood_gradient(self, coefficients):
         logit = self.get_logit(coefficients)
         logit_exp = np.exp(logit)
-        return np.dot(self.covariates.T, (self.outcomes - logit_exp / (1 + logit_exp))) / len(self.outcomes)
+        return np.dot(self.covariates.T, (logit_exp / (1 + logit_exp)) - self.outcomes) / len(self.outcomes)

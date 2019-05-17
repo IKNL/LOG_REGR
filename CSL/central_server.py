@@ -17,7 +17,7 @@ class Central_Node(Node):
 
     # calculated using local data and using MLE function
     def get_optimized_coefficients(self):
-        results = minimize(self.calculate_log_likelihood, self.current_coefficients, method='BFGS')
+        results = minimize(self.calculate_log_likelihood, self.current_coefficients, method='L-BFGS-B')
         return results["x"]
 
     def calculate_log_likelihood(self, coefficients):
@@ -31,21 +31,21 @@ class Central_Node(Node):
             node = Node(data_file=info["files"][file_number], outcome_variable=self.outcome_variable)
             self.gradients_all_sites.append(node.calculate_log_likelihood_gradient(coefficients))
 
-    def calculate_global_gradient(self, coefficients):
+    def calculate_global_gradient(self):
         self.gradients_all_sites = []
         # get gradients from all nodes
-        self.get_node_results(coefficients)
-        central_gradient = self.calculate_log_likelihood_gradient(coefficients)
+        self.get_node_results(self.current_coefficients)
+        central_gradient = self.calculate_log_likelihood_gradient(self.current_coefficients)
         self.gradients_all_sites.append(central_gradient)
         gradients_sum = np.zeros((self.covariates.shape[1], 1))
         for node_results in self.gradients_all_sites:
             gradients_sum = np.add(gradients_sum, node_results)
         # uses part in brackets of formula (3) for calculations
-        self.global_gradient =  central_gradient - (gradients_sum / len(self.gradients_all_sites))
+        self.global_gradient = central_gradient - (gradients_sum / len(self.gradients_all_sites))
 
     def calculate_surrogare_likelihood(self, coefficients):
         # calculation according to formula 3
-        return self.calculate_log_likelihood(coefficients) + np.asscalar(np.dot(coefficients, self.global_gradient))
+        return self.calculate_log_likelihood(coefficients) - np.asscalar(np.dot(coefficients, self.global_gradient))
 
     def get_vectors_difference(self, vector1, vector2):
         if len(vector1) == len(vector2):
@@ -58,8 +58,8 @@ class Central_Node(Node):
     # instead of log-likelihood maximization I minimize -log-likelihood
     def calculate_global_coefficients(self, log_file):
         # get the best coefficients based on only central-server data
-        precalculated_coefs = False
-        pooled_coefs = np.array([0.0216358, 0.22843066, 0.36183711, 0.86910588, 3.50070821, 3.00057885,
+        precalculated_coefs = True
+        pooled_coefs = np.array([2.16358, 0.22843066, 0.36183711, 0.86910588, 3.50070821, 3.00057885,
                          1.82560385, 0.53803323, 0.45747878, 0.27306922, 1.1601112, -0.11292471,
                          0.62010708, 0.32833225, 0.27338948, -6.33305999])
 
@@ -77,7 +77,7 @@ class Central_Node(Node):
         max_delta = 1e-3
         with open(log_file, "a") as file:
             for iteration in range(0, max_iterations):
-                self.calculate_global_gradient(self.current_coefficients)
+                self.calculate_global_gradient()
                 # make an update as in formula (3), gradient is saved into class variable and used inside hte formula
                 # coefficients are passed as parameter because they would be optimized inside the code
                 previous_coefficients = self.current_coefficients
