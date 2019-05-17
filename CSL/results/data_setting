@@ -1,0 +1,6 @@
+Data is shared as following:
+
+Central server has all the dataset
+Two other nodes have parts of the dataset which when combined form the same dataset as on the central server
+
+P.S. please have a look on the first coefficients, it's the strangest

@@ -23,6 +23,7 @@ class Node:
 
     def set_data(self, data_file):
         self.data = pd.read_csv(data_file)
+        self.data["leeft"] = self.data["leeft"] / 100
 
     def get_logit(self, coefficients):
         return np.dot(self.covariates, coefficients[None].T)

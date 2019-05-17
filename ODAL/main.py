@@ -24,7 +24,7 @@ for selection in range(0, number_of_selections):
     second_file = data_left.drop(first_file.index)
     second_file.to_csv(Path(cwd + "/data/second_file.csv"), index=False)
     central = Central_Node(data_file="data/central_data.csv", outcome_variable="3_years_death")
-    log_file = Path(cwd + "/localy_estimated_coefs/simulation{}.txt".format(selection))
+    log_file = Path(cwd + "/simulations/localy_estimated_coefs/simulation{}.txt".format(selection))
     open(log_file, 'w+').close()
     with open(log_file, "a+") as file:
         file.write("Central server contains {} number of records\n".format(len(central_data)))
