@@ -122,7 +122,7 @@ def get_client(token):
     return client
 
 
-def calculate_coefficients(beta, token=""):
+def calculate_coefficients(beta, result_file = None, token=""):
     info("Setup server communication client")
     client = get_client(token)
     iterations_number = 0
@@ -142,11 +142,16 @@ def calculate_coefficients(beta, token=""):
         beta += beta_update
         info("deviance after previous iteration = "
              + str(deviance_previous_iteration))
-    info("Final coefficients are:")
-    #transform beta to one-dimensional array
     beta = np.array(beta.T)
-    for column_index in range(len(columns)):
-        print("{}: {}".format(columns[column_index], beta[column_index]))
-    info("")
-    info("Total number of iterations is {}".format(iterations_number))
+    if result_file is not None:
+        with open(result_file, "w+") as file:
+            data = {}
+            data["iterations"] = iterations_number
+            data["is_converged"] = True if (iterations_number != max_iterations) else False
+            data["coefficients"] = {}
+            coefficient_index = 0
+            for column_index in range(len(columns)):
+                data["coefficients"][columns[column_index]] = beta[column_index][0]
+                coefficient_index += 1
+            file.write(json.dumps(data))
     return beta
