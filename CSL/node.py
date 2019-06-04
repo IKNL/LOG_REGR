@@ -8,8 +8,11 @@ class Node:
     outcomes = pd.DataFrame()
 
 
-    def __init__(self, data_file, outcome_variable):
-        self.set_data(data_file)
+    def __init__(self, outcome_variable, data = pd.DataFrame(), data_file=None):
+        if data_file != None:
+            self.set_data(data_file)
+        else:
+            self.set_data(data)
         self.outcome_variable = outcome_variable
         self.set_covariates()
         self.set_outcomes()
@@ -23,7 +26,9 @@ class Node:
 
     def set_data(self, data_file):
         self.data = pd.read_csv(data_file)
-        self.data["leeft"] = self.data["leeft"] / 100
+
+    def set_data(self, data):
+        self.data = data
 
     def get_logit(self, coefficients):
         return np.dot(self.covariates, coefficients[None].T)

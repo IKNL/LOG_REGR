@@ -1,4 +1,5 @@
-from .central_server import Central_Node
+from central_server import Central_Node
+from node import Node
 import pandas as pd
 import random
 import os
@@ -32,3 +33,38 @@ def calculate_logreg_csl():
             file.write("First node contains {} number of records\n".format(len(first_file)))
             file.write("Second node contains {} number of records\n".format(len(second_file)))
         central.calculate_global_coefficients(log_file)
+
+
+def calculate_logreg_csl_simulations(data, outcome_column,
+                                     site_column, central_site,
+                                     log_file, result_file, include_site_difference, is_odal):
+    if not include_site_difference:
+        not_region_cols = [col for col in data.columns if 'region' not in col]
+        data = data[not_region_cols]
+    central_data = data[data[site_column] == central_site]
+    del central_data["site_column"]
+    central_server = Central_Node(data=central_data,
+                           outcome_variable=outcome_column)
+    node_ids = data[site_column].unique()
+    for node in node_ids:
+        if node == central_site:
+            continue
+        node_data = data[data[site_column] == node]
+        del node_data["site_column"]
+        node = Node(data=node_data,
+                    outcome_variable=outcome_column)
+        central_server.append_second_node(node)
+    central_server.calculate_global_coefficients(log_file, is_odal, result_file)
+
+
+data = pd.read_csv("C:\project\simulations\datasets_simulations\datasets_simulations\simulations\simulation_0.csv")
+outcome_column = "is_referred"
+site_column = "site_column"
+central_site = 3
+log_file = r"C:\project\simulations\datasets_simulations\datasets_simulations\simulations\result_all.txt"
+result_file = r"C:\project\simulations\datasets_simulations\datasets_simulations\simulations\result.json"
+include_site_difference = True
+is_odal = True
+calculate_logreg_csl_simulations(data, outcome_column,
+                                     site_column, central_site,
+                                     log_file, result_file, include_site_difference, is_odal)
