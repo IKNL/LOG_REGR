@@ -5,7 +5,8 @@ import json
 import time
 import math
 from threading import Thread
-from node_code import make_local_iteration
+from node_code import make_local_iteration, iterate
+import pandas as pd
 
 # loggers
 info = lambda msg: sys.stdout.write("info > " + msg + "\n")
@@ -29,6 +30,10 @@ columns = ["intercept",
            "year_2015",
            "from_Netherlands"]
 outcome_variable = "3_years_death"
+is_simulation = False
+site_column = "site_column"
+# simulated all dataset
+simulated_data = pd.DataFrame()
 
 
 def run_distributed(client, beta):
@@ -61,6 +66,11 @@ def run_distributed(client, beta):
     return results
 
 
+def run_local_simulation_node(beta, data):
+    node_results = iterate(beta, outcome_variable, data)
+    local_nodes_results.append(json.dumps(node_results))
+
+
 def run_local_node(beta, file):
     node_results = make_local_iteration(coefficients=beta, outcome_variable=outcome_variable, columns=columns,
                                         data_file=file, separator=",")
@@ -68,12 +78,21 @@ def run_local_node(beta, file):
 
 
 def run_locally(beta):
-    with open('local_config.json') as config:
-        data = json.load(config)
-    for node in data["nodes"]["nodes_files"]:
-        node_thread = Thread(target=run_local_node, args=(beta, node,))
-        node_thread.start()
-    number_of_nodes = data["nodes"]["number_of_nodes"]
+    if not is_simulation:
+        with open('local_config.json') as config:
+            data = json.load(config)
+        for node in data["nodes"]["nodes_files"]:
+            node_thread = Thread(target=run_local_node, args=(beta, node,))
+            node_thread.start()
+        number_of_nodes = data["nodes"]["number_of_nodes"]
+    if is_simulation:
+        nodes = simulated_data[site_column].unique()
+        for node in nodes:
+            node_data = simulated_data[simulated_data[site_column] == node]
+            del node_data[site_column]
+            node_thread = Thread(target=run_local_simulation_node, args=(beta, node_data,))
+            node_thread.start()
+        number_of_nodes = len(nodes)
     while len(local_nodes_results) < number_of_nodes:
         time.sleep(1)
     results = local_nodes_results.copy()
@@ -122,7 +141,21 @@ def get_client(token):
     return client
 
 
-def calculate_coefficients(beta, result_file = None, token=""):
+def calculate_simulated_coefficients(beta, result_file, all_data, outcome_column):
+    global outcome_variable
+    outcome_variable = outcome_column
+    global simulated_data
+    simulated_data = all_data
+    global is_simulation
+    is_simulation = True
+    global columns
+    columns = list(all_data)
+    columns.remove(outcome_variable)
+    columns.remove(site_column)
+    return calculate_coefficients(beta, result_file)
+
+
+def calculate_coefficients(beta, result_file=None, token=""):
     info("Setup server communication client")
     client = get_client(token)
     iterations_number = 0
@@ -153,5 +186,5 @@ def calculate_coefficients(beta, result_file = None, token=""):
             for column_index in range(len(columns)):
                 data["coefficients"][columns[column_index]] = beta[column_index][0]
                 coefficient_index += 1
-            file.write(json.dumps(data))
+            file.write(json.dumps(data, indent=4))
     return beta
