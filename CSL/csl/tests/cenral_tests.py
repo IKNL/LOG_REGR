@@ -1,5 +1,5 @@
 from unittest import TestCase
-from central_server import Central_Node
+from csl.central_server import Central_Node
 import numpy as np
 
 class Central_tests(TestCase):

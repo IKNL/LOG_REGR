@@ -31,7 +31,7 @@ columns = ["intercept",
            "from_Netherlands"]
 outcome_variable = "3_years_death"
 is_simulation = False
-site_column = "site_column"
+site_column = ""
 # simulated all dataset
 simulated_data = pd.DataFrame()
 
@@ -141,7 +141,7 @@ def get_client(token):
     return client
 
 
-def calculate_simulated_coefficients(beta, result_file, all_data, outcome_column):
+def calculate_simulated_coefficients(result_file, all_data, outcome_column, site_col):
     global outcome_variable
     outcome_variable = outcome_column
     global simulated_data
@@ -152,6 +152,9 @@ def calculate_simulated_coefficients(beta, result_file, all_data, outcome_column
     columns = list(all_data)
     columns.remove(outcome_variable)
     columns.remove(site_column)
+    global site_column
+    site_column = site_col
+    beta = np.asmatrix(np.zeros(len(columns))),
     return calculate_coefficients(beta, result_file)
 
 

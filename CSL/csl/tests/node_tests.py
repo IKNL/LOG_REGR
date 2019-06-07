@@ -1,5 +1,5 @@
 from unittest import TestCase
-from node import Node
+from csl.node import Node
 import numpy as np
 
 class Node_tests(TestCase):

@@ -1,4 +1,4 @@
-from node import Node
+from csl.node import Node
 import numpy as np
 import pandas as pd
 from scipy.optimize import minimize
@@ -106,4 +106,4 @@ class Central_Node(Node):
                     data["coefficients"][covariate] = \
                         self.current_coefficients[coefficient_index]
                     coefficient_index += 1
-                file.write(json.dumps(data))
+                file.write(json.dumps(data, indent=4))
