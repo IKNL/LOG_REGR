@@ -3,6 +3,8 @@ import numpy as np
 import pandas as pd
 from scipy.optimize import minimize
 import json
+import time
+from threading import Thread
 
 
 class Central_Node(Node):
@@ -31,9 +33,13 @@ class Central_Node(Node):
         return (np.sum(np.log(1 + np.exp(logit))) - np.asscalar(np.dot(np.transpose(self.outcomes), logit))) / len(
             self.outcomes)
 
+    def calculate_node_gradient(self, node, coefficients):
+        self.gradients_all_sites.append(node.calculate_log_likelihood_gradient(coefficients))
+
     def get_node_results(self, coefficients):
         for node in self.second_nodes:
-            self.gradients_all_sites.append(node.calculate_log_likelihood_gradient(coefficients))
+            node_calculation_thread = Thread(target=self.calculate_node_gradient, args=(node, coefficients,))
+            node_calculation_thread.start()
 
     def calculate_global_gradient(self):
         self.gradients_all_sites = []
@@ -41,6 +47,9 @@ class Central_Node(Node):
         self.get_node_results(self.current_coefficients)
         central_gradient = self.calculate_log_likelihood_gradient(self.current_coefficients)
         self.gradients_all_sites.append(central_gradient)
+        # 1 which is added to the number of second nodes means the central server
+        while len(self.gradients_all_sites) != len(self.second_nodes) + 1:
+            time.sleep(0.1)
         gradients_sum = np.zeros((self.covariates.shape[1], 1))
         for node_results in self.gradients_all_sites:
             gradients_sum = np.add(gradients_sum, node_results)
@@ -60,7 +69,7 @@ class Central_Node(Node):
     # minimize function is used since maximized function is not present among optimization methods
     # therefore don't be surprised to see that I change the original approach
     # instead of log-likelihood maximization I minimize -log-likelihood
-    def calculate_global_coefficients(self, log_file, is_odal = False, result_file=None):
+    def calculate_global_coefficients(self, log_file, is_odal=False, result_file=None):
         # get the best coefficients based on only central-server data
         self.current_coefficients = self.get_optimized_coefficients()
 
@@ -74,7 +83,8 @@ class Central_Node(Node):
             max_delta = 1e-3
             converged = False
             final_number_of_iterations = max_iterations
-        with open(log_file, "w+") as file:
+
+        with open(log_file, "w") as file:
             if is_odal:
                 self.calculate_global_gradient()
                 # make an update as in formula (3), gradient is saved into class variable and used inside hte formula
@@ -89,13 +99,14 @@ class Central_Node(Node):
                     previous_coefficients = self.current_coefficients
                     self.current_coefficients = \
                         minimize(self.calculate_surrogare_likelihood, self.current_coefficients, method='L-BFGS-B')["x"]
-                    file.write("Coefficients after iteration {} are: {}\n".format(iteration + 1, self.current_coefficients))
+                    file.write(
+                        "Coefficients after iteration {} are: {}\n".format(iteration + 1, self.current_coefficients))
                     if self.get_vectors_difference(self.current_coefficients, previous_coefficients) < max_delta:
                         converged = True
                         final_number_of_iterations = iteration
                         break
         if result_file != None:
-            with open(result_file, "w+") as file:
+            with open(result_file, "w") as file:
                 data = {}
                 if not is_odal:
                     data["iterations"] = final_number_of_iterations
