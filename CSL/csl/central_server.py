@@ -72,8 +72,7 @@ class Central_Node(Node):
     def calculate_global_coefficients(self, log_file, is_odal=False, result_file=None):
         # get the best coefficients based on only central-server data
         self.current_coefficients = self.get_optimized_coefficients()
-
-        with open(log_file, "a+") as file:
+        with open(log_file, "w") as file:
             file.write("Coefficients before iterations start are: {}\n".format(self.current_coefficients))
 
         # it calculates the gradient term which is inside the bracket in formula (3) Take into account that it required to
@@ -84,7 +83,7 @@ class Central_Node(Node):
             converged = False
             final_number_of_iterations = max_iterations
 
-        with open(log_file, "w") as file:
+        with open(log_file, "a") as file:
             if is_odal:
                 self.calculate_global_gradient()
                 # make an update as in formula (3), gradient is saved into class variable and used inside hte formula

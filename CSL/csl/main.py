@@ -5,6 +5,7 @@ import random
 import os
 from pathlib import Path
 
+
 def calculate_logreg_csl():
     number_of_selections = 100
     initial_seed = 10
@@ -41,7 +42,7 @@ def calculate_logreg_csl_simulations(data, outcome_column,
     central_data = data[data[site_column] == central_site]
     del central_data["site_column"]
     central_server = Central_Node(data=central_data,
-                           outcome_variable=outcome_column)
+                                  outcome_variable=outcome_column)
     node_ids = data[site_column].unique()
     for node in node_ids:
         if node == central_site:

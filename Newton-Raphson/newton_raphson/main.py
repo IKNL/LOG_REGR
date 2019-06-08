@@ -4,11 +4,11 @@ This is the main entry-point when the docker-container is initialized.
 It executes the following steps:
 
 1) read the input.txt
-    This should contain the name of the method that should be executed.
+    This should contain the name of the newton_raphson that should be executed.
     Optionally it contains some args and kwargs
 2) In case it is a master algorithm the token is read from token.txt
     This is a JWT token that can be used to interact with the server
-3) The method is executed
+3) The newton_raphson is executed
 4) The output it written to output.txt
 
 If the docker container is terminated. Output.txt will be send to the
@@ -28,13 +28,13 @@ with open("app/input.txt") as fp:
 
 # determine function from input, summarize is used by default.
 # and get the args and kwargs input for this function
-method_name = input_.get("method","make_local_iteration")
+method_name = input_.get("newton_raphson","make_local_iteration")
 method = {
     "node_regression": make_local_iteration,
     "master": calculate_coefficients
 }.get(method_name)
 if not method:
-    warn(f"method name={method_name} not found!\n")
+    warn(f"newton_raphson name={method_name} not found!\n")
     exit()
 
 args = input_.get("args", [])

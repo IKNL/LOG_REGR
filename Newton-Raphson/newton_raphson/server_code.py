@@ -5,7 +5,7 @@ import json
 import time
 import math
 from threading import Thread
-from node_code import make_local_iteration, iterate
+from newton_raphson.node_code import make_local_iteration, iterate
 import pandas as pd
 
 # loggers
@@ -13,28 +13,13 @@ info = lambda msg: sys.stdout.write("info > " + msg + "\n")
 warn = lambda msg: sys.stdout.write("warn > " + msg + "\n")
 
 local_nodes_results = []
-columns = ["intercept",
-           "leeft",
-           "is_male",
-           "stage_2",
-           "stage_3",
-           "stage_4",
-           "stage_Other",
-           "stage_Unknown",
-           "type_Follicular",
-           "type_Hurthe cell",
-           "type_Medullary",
-           "type_Other/Malignant",
-           "type_Papillary-Follicular mixed",
-           "year_2014",
-           "year_2015",
-           "from_Netherlands"]
-outcome_variable = "3_years_death"
+columns = []
+outcome_variable = ""
 is_simulation = False
 site_column = ""
 # simulated all dataset
 simulated_data = pd.DataFrame()
-
+log_file = None
 
 def run_distributed(client, beta):
     # define the input for the node regression
@@ -94,7 +79,7 @@ def run_locally(beta):
             node_thread.start()
         number_of_nodes = len(nodes)
     while len(local_nodes_results) < number_of_nodes:
-        time.sleep(1)
+        time.sleep(0.1)
     results = local_nodes_results.copy()
     local_nodes_results.clear()
     return [json.loads(result) for result in results]
@@ -108,22 +93,24 @@ def get_results_from_nodes(beta, client):
 
 
 def make_iteration(beta, client):
-    info("Obtaining results")
     results = get_results_from_nodes(beta, client)
     info_matrix = sum([np.asmatrix(node_result["info_matrix"]) for node_result in results])
     score_vector = sum([np.asmatrix(node_result["score_vector"]) for node_result in results])
     deviance = sum([node_result["deviance"] for node_result in results])
-    rows = sum([node_result["rows_number"] for node_result in results])
 
     variance_covariance_matrix = np.linalg.inv(info_matrix)
     beta = (variance_covariance_matrix * np.asmatrix(score_vector)).T
-    info("Variance covariance matrix is equal to ")
-    info(str(info_matrix))
-    info("Score vector is equal to")
-    info(str(score_vector))
-    info("beta update is " + str(beta) + "\n")
-    info("deviance =" + str(deviance) + "on " +
-         str((rows - len(beta))) + " degrees of freedom")
+    if not log_file:
+        info("Variance covariance matrix is equal to\n {}\n\n".format(info_matrix))
+        info("Score vector is equal to\n {}\n\n".format(score_vector))
+        info("beta update is {}\n\n".format(beta))
+        info("deviance = {}\n\n".format(deviance))
+    else:
+        with open(log_file, "w+") as file:
+            file.write("Variance covariance matrix is equal to\n {}\n\n".format(info_matrix))
+            file.write("Score vector is equal to\n {}\n\n".format(score_vector))
+            file.write("beta update is {}\n\n".format(beta))
+            file.write("deviance = {}\n\n".format(deviance))
 
     return deviance, beta
 
@@ -141,29 +128,32 @@ def get_client(token):
     return client
 
 
-def calculate_simulated_coefficients(result_file, all_data, outcome_column, site_col):
+def calculate_simulated_coefficients(result_file, file_with_logs, all_data, outcome_column, site_col):
+    global log_file
+    log_file = file_with_logs
+    open(log_file, 'w').close()
     global outcome_variable
     outcome_variable = outcome_column
     global simulated_data
     simulated_data = all_data
     global is_simulation
     is_simulation = True
+    global site_column
+    site_column = site_col
     global columns
     columns = list(all_data)
     columns.remove(outcome_variable)
     columns.remove(site_column)
-    global site_column
-    site_column = site_col
-    beta = np.asmatrix(np.zeros(len(columns))),
+    beta = np.asmatrix(np.zeros((1, len(columns))))
     return calculate_coefficients(beta, result_file)
 
 
 def calculate_coefficients(beta, result_file=None, token=""):
-    info("Setup server communication client")
+    #info("Setup server communication client")
     client = get_client(token)
     iterations_number = 0
     epsilon = math.pow(10, -8)
-    max_iterations = 500
+    max_iterations = 100
     deviance_previous_iteration = math.pow(10, 10)
     deviance = -math.pow(10, 10)
 
@@ -172,12 +162,16 @@ def calculate_coefficients(beta, result_file=None, token=""):
              iterations_number < max_iterations):
         iterations_number += 1
         deviance_previous_iteration = deviance
-        info("SUMMARY OF MODEL AFTER ITERATION " + str(iterations_number))
+        if log_file is None:
+            info("SUMMARY OF MODEL AFTER ITERATION {}".format(iterations_number))
+            info("deviance after previous iteration = {}".format(deviance_previous_iteration))
+        else:
+            with open(log_file, "a") as file:
+                file.write("SUMMARY OF MODEL AFTER ITERATION {}".format(iterations_number))
+                file.write("deviance after previous iteration = {}"
+                           .format(deviance_previous_iteration))
         deviance, beta_update = make_iteration(beta, client)
-        info("Beta update shape is: " + str(beta_update.shape))
         beta += beta_update
-        info("deviance after previous iteration = "
-             + str(deviance_previous_iteration))
     beta = np.array(beta.T)
     if result_file is not None:
         with open(result_file, "w+") as file:
