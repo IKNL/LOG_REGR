@@ -52,6 +52,7 @@ def train_linear(XTR, YTR, lik_method, prior_mean, prior_variance, state=None):
         v = np.ones((1, n)) * math.inf
 
         vw = vp
+        # mw dimensions are d * 1
         mw = mp
     else:
         a = obj["state"]["a"]
@@ -63,18 +64,62 @@ def train_linear(XTR, YTR, lik_method, prior_mean, prior_variance, state=None):
 
     iterations_number = 1
     is_last_iteration = False
+    stability = np.zeros(n)
+    zi = np.zeros(n)
 
     for iteration in range(0, iterations_number):
         is_last_iteration = is_last_iteration or (iteration == iterations_number - 1)
         nskip = 0
         old_mw = mw
         for i in range(0, n - 1):
+            # vw is size d * d
             vw = np.eye(d)
+            # vwx is size d * 1
             vwx = np.matmul(vw, x[:, i])
+            # xvwx is a number
             xvwx = np.matmul(x[:, 1].T, vwx)
             if np.isfinite(v[i]):
-
+                # v0 dimensions are d * d
+                v0 = vw + np.matmul(vwx, vwx.T) * ((v[i] - xvwx) ** -1)
+                # v0x dimensions are d * 1
+                v0x = vwx * (v[i] / (v[i] - xvwx))
+                # xv0x is a number
+                xv0x = 1 / (1 / xvwx - 1 / v[i])
+                # m0 dimensions are d * 1
+                m0 = mw + v0x / (v[i] * (np.matmul(x[:, i].T, mw) - m[i]))
             else:
+                v0 = vw
+                v0x = vwx
+                xv0x = xvwx
+                m0 = mw
+            if xv0x < 0:
+                nskip += 1
+                continue
+
+            #   xm is a number
+            xm = np.matmul(x[:, i].T, m0)
+            # z is a number
+            z = xm / math.sqrt(math.pi / 8 * xv0x + 1)
+            # true is a number
+            true = 1 / (1 + math.exp(z))
+            # alpha is a number
+            alpha = true / math.sqrt(math.pi / 8 * xv0x + 1)
+
+            mw = m0 + v0x * alpha
+            # xmw is a number
+            xmw = np.matmul(x[:, i].T, mw)
+
+            assert (z != np.nan)
+
+            stability[i] = abs(xv0x)
+            zi[i] = z
+
+            # prev_v is a number
+            prev_v = v[i]
+            if restrict and v[i] < 0:
+                v[i] = prev_v
+            else:
+                vw = v0 - np.matmul(v0x, v0x.T) * (alpha * (math.pi / 8 * xmw + alpha) / (math.pi / 8 * xv0x + 1))
 
 
 X = np.array([[10, 20], [10, 20], [10, 20]])
