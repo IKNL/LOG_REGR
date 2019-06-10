@@ -49,7 +49,8 @@ def train_linear(XTR, YTR, lik_method, prior_mean, prior_variance, state=None):
 
         a = np.zeros((1, n))
         m = np.ones((1, n))
-        v = np.ones((1, n)) * math.inf
+        # since we use only one row, I changed it to 1-dimensional array
+        v = np.ones((n)) * math.inf
 
         vw = vp
         # mw dimensions are d * 1
@@ -71,13 +72,17 @@ def train_linear(XTR, YTR, lik_method, prior_mean, prior_variance, state=None):
         is_last_iteration = is_last_iteration or (iteration == iterations_number - 1)
         nskip = 0
         old_mw = mw
-        for i in range(0, n - 1):
+        for i in range(0, n):
             # vw is size d * d
             vw = np.eye(d)
             # vwx is size d * 1
-            vwx = np.matmul(vw, x[:, i])
+            # i is inside brackets to get a column vector
+            vwx = np.matmul(vw, x[:, [i]])
             # xvwx is a number
-            xvwx = np.matmul(x[:, 1].T, vwx)
+            # i is not inside brackets since the form returned would be 1 * d
+            # item is added to get a single value
+            xvwx = np.matmul(x[:, i], vwx).item()
+
             if np.isfinite(v[i]):
                 # v0 dimensions are d * d
                 v0 = vw + np.matmul(vwx, vwx.T) * ((v[i] - xvwx) ** -1)
@@ -96,8 +101,9 @@ def train_linear(XTR, YTR, lik_method, prior_mean, prior_variance, state=None):
                 nskip += 1
                 continue
 
-            #   xm is a number
-            xm = np.matmul(x[:, i].T, m0)
+            #  xm is a number
+            # I put item at the end so method returns a single value instead of 1*1 array
+            xm = np.matmul(x[:, i].T, m0).item()
             # z is a number
             z = xm / math.sqrt(math.pi / 8 * xv0x + 1)
             # true is a number
@@ -105,15 +111,16 @@ def train_linear(XTR, YTR, lik_method, prior_mean, prior_variance, state=None):
             # alpha is a number
             alpha = true / math.sqrt(math.pi / 8 * xv0x + 1)
 
+            # mw dimensions are d * 1
             mw = m0 + v0x * alpha
             # xmw is a number
-            xmw = np.matmul(x[:, i].T, mw)
+            # item is added to get a single value
+            xmw = np.matmul(x[:, i].T, mw).item()
 
             assert (z != np.nan)
 
             stability[i] = abs(xv0x)
             zi[i] = z
-
             # prev_v is a number
             prev_v = v[i]
             if restrict and v[i] < 0:
@@ -124,4 +131,5 @@ def train_linear(XTR, YTR, lik_method, prior_mean, prior_variance, state=None):
 
 X = np.array([[10, 20], [10, 20], [10, 20]])
 Y = np.array([[-1], [1], [-1]])
-train_linear(X, Y, "", "", "")
+# XTR, YTR, lik_method, prior_mean, prior_variance, state=None
+train_linear(X, Y, "", [3], "")
