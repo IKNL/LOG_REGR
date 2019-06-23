@@ -131,14 +131,15 @@ def new_data_listener():
     while not close_server:
         results.clear()
         for client in range(0, clients):
-            node = explorer_node.explorer_node(client)
+            node = explorer_node.explorer_node(client, nodes_data[client]["covariates"], nodes_data[client]["outcome"])
             nodes.append(node)
-            thread = threading.Thread(target=explorer_node.new_job_listener,
-                                      args=(results, nodes_data[client]["covariates"], nodes_data[client]["outcome"]))
+            thread = threading.Thread(target=node.new_job_listener,
+                                      args=(results,))
             thread.start()
         if not EP_result["jobDone"]:
             EP_result = update_all_sites(EP_result)
             EP_result = handleIncomingMessageFromClient(EP_result)
+            print(EP_result)
         else:
             close_server = True
     print(EP_result)
@@ -149,6 +150,8 @@ def run_simulation(data, site_column, outcome_column):
     global is_simulation
     global nodes_data
     is_simulation = True
+    #TODO modify code to preven automatic creation of intercept
+    del data["intercept"]
     sites_values = data[site_column].unique()
     clients = len(sites_values)
     for site_value in sites_values:
@@ -160,11 +163,11 @@ def run_simulation(data, site_column, outcome_column):
             "covariates": site_data,
             "outcome": outcomes
         })
-        new_data_listener()
+    new_data_listener()
 
 
 if __name__ == '__main__':
-    file_location = ""
+    file_location = r"E:\simulation_0.csv"
     data = pd.read_csv(file_location)
     site_column = "site_column"
     outcome_column = "is_referred"

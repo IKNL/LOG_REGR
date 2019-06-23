@@ -16,7 +16,9 @@ def bpm_ep(X, Y, type, prior_mean, prior_variance, state):
     # since logistic regression, e = 1
     e = 1
     X = np.c_[np.ones((X.shape[0], 1)), X]
-    # np.multiple - element-wise multiplication in python
+    # np.multiply - element-wise multiplication in python
+    # np.repmat repeats array Y is repeated 1 time through 0 axe and X.shape[1] through axe 1
+    print(Y.shape[1])
     data = np.multiply(X, np.matlib.repmat(Y, 1, X.shape[1]))
     obj = {"type": type, "e": e, "add_bias": 1, "mp": [], "vp": [], "s": [], "mw": [], "vw": [], "alpha": [],
            "bias": [],
