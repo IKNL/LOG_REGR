@@ -2,6 +2,7 @@ import numpy as np
 import time
 import threading
 import explorer_node
+import pandas as pd
 
 close_server = False
 number_of_features = 10
@@ -161,5 +162,13 @@ def run_simulation(data, site_column, outcome_column):
         })
         new_data_listener()
 
-        if __name__ == '__main__':
-            run_simulation()
+
+if __name__ == '__main__':
+    file_location = ""
+    data = pd.read_csv(file_location)
+    site_column = "site_column"
+    outcome_column = "is_referred"
+    run_simulation(data, site_column, outcome_column)
+
+
+
