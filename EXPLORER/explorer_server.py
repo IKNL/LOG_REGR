@@ -8,6 +8,9 @@ number_of_features = 10
 clients = 10
 results = []
 nodes = []
+nodes_data = []
+is_simulation = False
+
 
 def checkConverge(EP_result):
     # check if iteration finished, I believe
@@ -25,12 +28,14 @@ def sendout_message(EP_result):
         EP_result["jobDone"] = True
         for node in nodes:
             node.stop_computations()
-    central_message = {"iter": EP_result["iter"], "mw": EP_result["posterior_new_mw"], "vw": EP_result["posterior_new_vw"]}
+    central_message = {"iter": EP_result["iter"], "mw": EP_result["posterior_new_mw"],
+                       "vw": EP_result["posterior_new_vw"]}
     for node in nodes:
         node.run_one_more_iteration(central_message)
     return EP_result
 
-#TODO look into a problem with my reduced dimensionality from 2 to 1
+
+# TODO look into a problem with my reduced dimensionality from 2 to 1
 
 def gaussian_multiplication(m1, v1, m2, v2):
     v = np.linalg.inv(np.linalg.inv(v1) + np.linalg.inv(v2))
@@ -47,7 +52,7 @@ def gaussian_division(m1, v1, m2, v2):
 
 
 def handleIncomingMessageFromClient(EP_result):
-    while(len(results) != clients):
+    while (len(results) != clients):
         time.sleep(0.5)
     for client in range(0, clients):
         if (EP_result.iter == results[client]["iter"]):
@@ -70,10 +75,10 @@ def combine_prior(EP_result):
     for i in range(1, number_of_sites):
         prior_mean_comb, prior_variance_comb = \
             gaussian_multiplication(prior_mean_comb, prior_variance_comb,
-                                EP_result["incoming_mw"][i], EP_result["incoming_vw"][i])
-        #TODO % remove n-i number of priors  what it means?
+                                    EP_result["incoming_mw"][i], EP_result["incoming_vw"][i])
+        # TODO % remove n-i number of priors  what it means?
         if (number_of_sites > 1):
-            prior_mean_comb, prior_variance_comb = gaussian_division\
+            prior_mean_comb, prior_variance_comb = gaussian_division \
                 (prior_mean_comb, prior_variance_comb, prior_mean, prior_variance / (number_of_sites - 1));
         EP_result["posterior_new_mw"] = prior_mean_comb
         EP_result["posterior_new_vw"] = prior_variance_comb
@@ -101,6 +106,11 @@ def update_all_sites(EP_result):
     return EP_result
 
 
+def get_node_data(id):
+    if is_simulation:
+        return nodes_data[id]["covariates"], nodes_data[id]["outcome"]
+
+
 def new_data_listener():
     EP_result = {}
     EP_result["clientCount"] = []
@@ -123,11 +133,33 @@ def new_data_listener():
             node = explorer_node.explorer_node(client)
             nodes.append(node)
             thread = threading.Thread(target=explorer_node.new_job_listener,
-                                      args=(results, ))
+                                      args=(results, nodes_data[client]["covariates"], nodes_data[client]["outcome"]))
             thread.start()
-        EP_result = update_all_sites(EP_result)
-        EP_result = handleIncomingMessageFromClient(EP_result)
+        if not EP_result["jobDone"]:
+            EP_result = update_all_sites(EP_result)
+            EP_result = handleIncomingMessageFromClient(EP_result)
+        else:
+            close_server = True
+    print(EP_result)
 
 
-if __name__ == '__main__':
-    new_data_listener()
+def run_simulation(data, site_column, outcome_column):
+    global clients
+    global is_simulation
+    global nodes_data
+    is_simulation = True
+    sites_values = data[site_column].unique()
+    clients = len(sites_values)
+    for site_value in sites_values:
+        site_data = data[data[site_column] == site_value]
+        del site_data[site_column]
+        outcomes = site_data[outcome_column]
+        del site_data[outcome_column]
+        nodes_data.append({
+            "covariates": site_data,
+            "outcome": outcomes
+        })
+        new_data_listener()
+
+        if __name__ == '__main__':
+            run_simulation()
