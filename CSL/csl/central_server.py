@@ -21,8 +21,9 @@ class Central_Node(Node):
 
     # calculated using local data and using MLE function
     def get_optimized_coefficients(self):
-        results = minimize(self.calculate_log_likelihood, self.current_coefficients, method='L-BFGS-B')
-        return results["x"]
+        results = minimize(self.calculate_log_likelihood, self.current_coefficients,
+                           method='L-BFGS-B', tol=1e-6)
+        return results["x"] * 0
 
     def append_second_node(self, node):
         self.second_nodes.append(node)
@@ -30,8 +31,8 @@ class Central_Node(Node):
     def calculate_log_likelihood(self, coefficients):
         logit = self.get_logit(coefficients)
         # uses formula 2 for calculations
-        return (np.sum(np.log(1 + np.exp(logit))) - np.asscalar(np.dot(np.transpose(self.outcomes), logit))) / len(
-            self.outcomes)
+        return (np.sum(np.log(1 + np.exp(logit))) - np.asscalar(np.dot(np.transpose(self.outcomes), logit))) \
+               / len(self.outcomes)
 
     def calculate_node_gradient(self, node, coefficients):
         self.gradients_all_sites.append(node.calculate_log_likelihood_gradient(coefficients))
@@ -51,8 +52,8 @@ class Central_Node(Node):
         while len(self.gradients_all_sites) != len(self.second_nodes) + 1:
             time.sleep(0.1)
         gradients_sum = np.zeros((self.covariates.shape[1], 1))
-        for node_results in self.gradients_all_sites:
-            gradients_sum = np.add(gradients_sum, node_results)
+        for node_gradient in self.gradients_all_sites:
+            gradients_sum = np.add(gradients_sum, node_gradient)
         # uses part in brackets of formula (3) for calculations
         self.global_gradient = central_gradient - (gradients_sum / len(self.gradients_all_sites))
 
@@ -74,33 +75,37 @@ class Central_Node(Node):
         self.current_coefficients = self.get_optimized_coefficients()
         with open(log_file, "w") as file:
             file.write("Coefficients before iterations start are: {}\n".format(self.current_coefficients))
-
         # it calculates the gradient term which is inside the bracket in formula (3) Take into account that it required to
         # be calculated only once
         if not is_odal:
-            max_iterations = 100
+            max_iterations = 50
             max_delta = 1e-3
             converged = False
             final_number_of_iterations = max_iterations
 
+        running_time = 0
         with open(log_file, "a") as file:
             if is_odal:
+                start_time = time.time()
                 self.calculate_global_gradient()
                 # make an update as in formula (3), gradient is saved into class variable and used inside hte formula
                 # coefficients are passed as parameter because they would be optimized inside the code
                 self.current_coefficients = \
-                    minimize(self.calculate_surrogare_likelihood, self.current_coefficients, method='l-bfgs-b')["x"]
+                    minimize(self.calculate_surrogare_likelihood, self.current_coefficients,
+                             method='L-BFGS-B', tol=1e-6)["x"]
+                running_time = time.time() - start_time
             else:
+                start_time = time.time()
                 for iteration in range(0, max_iterations):
                     self.calculate_global_gradient()
                     # make an update as in formula (3), gradient is saved into class variable and used inside hte formula
                     # coefficients are passed as parameter because they would be optimized inside the code
                     previous_coefficients = self.current_coefficients
-                    self.current_coefficients = \
-                        minimize(self.calculate_surrogare_likelihood, self.current_coefficients, method='L-BFGS-B')["x"]
-                    file.write(
-                        "Coefficients after iteration {} are: {}\n".format(iteration + 1, self.current_coefficients))
+                    optimization_results = minimize(self.calculate_surrogare_likelihood,
+                                 self.current_coefficients, method='L-BFGS-B', tol=1e-6)
+                    self.current_coefficients = optimization_results["x"]
                     if self.get_vectors_difference(self.current_coefficients, previous_coefficients) < max_delta:
+                        running_time = time.time() - start_time
                         converged = True
                         final_number_of_iterations = iteration
                         break
@@ -110,6 +115,7 @@ class Central_Node(Node):
                 if not is_odal:
                     data["iterations"] = final_number_of_iterations
                     data["is_converged"] = converged
+                data["running_time"] = running_time
                 data["coefficients"] = {}
                 coefficient_index = 0
                 for covariate in self.covariates.columns:

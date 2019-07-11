@@ -100,19 +100,21 @@ def make_iteration(beta, client):
 
     variance_covariance_matrix = np.linalg.inv(info_matrix)
     beta = (variance_covariance_matrix * np.asmatrix(score_vector)).T
+    start_writing_time = time.time()
     if not log_file:
         info("Variance covariance matrix is equal to\n {}\n\n".format(info_matrix))
         info("Score vector is equal to\n {}\n\n".format(score_vector))
         info("beta update is {}\n\n".format(beta))
         info("deviance = {}\n\n".format(deviance))
     else:
+
         with open(log_file, "w+") as file:
             file.write("Variance covariance matrix is equal to\n {}\n\n".format(info_matrix))
             file.write("Score vector is equal to\n {}\n\n".format(score_vector))
             file.write("beta update is {}\n\n".format(beta))
             file.write("deviance = {}\n\n".format(deviance))
-
-    return deviance, beta
+    not_calculating_time = time.time() - start_writing_time
+    return deviance, beta, not_calculating_time
 
 
 def get_client(token):
@@ -152,16 +154,20 @@ def calculate_coefficients(beta, result_file=None, token=""):
     #info("Setup server communication client")
     client = get_client(token)
     iterations_number = 0
-    epsilon = math.pow(10, -8)
+    epsilon = math.pow(10, -6)
     max_iterations = 100
     deviance_previous_iteration = math.pow(10, 10)
     deviance = -math.pow(10, 10)
+    start_time = time.time()
+    # some time is spend on writing into files, I extract this time from the final to achieve more reliable result
+    not_calculations_time = 0
 
     while iterations_number == 0 or \
             (abs(deviance - deviance_previous_iteration) > epsilon and
              iterations_number < max_iterations):
         iterations_number += 1
         deviance_previous_iteration = deviance
+        writing_start_time = time.time()
         if log_file is None:
             info("SUMMARY OF MODEL AFTER ITERATION {}".format(iterations_number))
             info("deviance after previous iteration = {}".format(deviance_previous_iteration))
@@ -170,14 +176,18 @@ def calculate_coefficients(beta, result_file=None, token=""):
                 file.write("SUMMARY OF MODEL AFTER ITERATION {}".format(iterations_number))
                 file.write("deviance after previous iteration = {}"
                            .format(deviance_previous_iteration))
-        deviance, beta_update = make_iteration(beta, client)
+        not_calculations_time += time.time() - writing_start_time
+        deviance, beta_update, iteration_not_calculation_time = make_iteration(beta, client)
+        not_calculations_time += iteration_not_calculation_time
         beta += beta_update
+    running_time = time.time() - start_time - not_calculations_time
     beta = np.array(beta.T)
     if result_file is not None:
         with open(result_file, "w+") as file:
             data = {}
             data["iterations"] = iterations_number
             data["is_converged"] = True if (iterations_number != max_iterations) else False
+            data["running_time"] = running_time
             data["coefficients"] = {}
             coefficient_index = 0
             for column_index in range(len(columns)):

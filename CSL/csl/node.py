@@ -31,6 +31,7 @@ class Node:
         self.data = data
 
     def get_logit(self, coefficients):
+        # None is added to be able to transpose the vector
         return np.dot(self.covariates, coefficients[None].T)
 
     # do not init coefficients with 0
@@ -38,5 +39,6 @@ class Node:
     # test with manual data exists
     def calculate_log_likelihood_gradient(self, coefficients):
         logit = self.get_logit(coefficients)
-        logit_exp = np.exp(logit)
-        return np.dot(self.covariates.T, (logit_exp / (1 + logit_exp)) - self.outcomes) / len(self.outcomes)
+        logit_exp = np.exp(-logit)
+        return np.dot(self.covariates.T, (1 /
+                                          (1 + logit_exp)) - self.outcomes) / len(self.outcomes)
