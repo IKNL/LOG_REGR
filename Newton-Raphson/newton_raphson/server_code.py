@@ -150,6 +150,14 @@ def calculate_simulated_coefficients(result_file, file_with_logs, all_data, outc
     return calculate_coefficients(beta, result_file)
 
 
+def write_error_information(result_file, error):
+    if result_file is not None:
+        with open(result_file, "w+") as file:
+            data = {"is_converged": False, "coefficients": {}}
+            data["separation"]: error
+            file.write(json.dumps(data, indent=4))
+
+
 def calculate_coefficients(beta, result_file=None, token=""):
     #info("Setup server communication client")
     client = get_client(token)
@@ -177,9 +185,18 @@ def calculate_coefficients(beta, result_file=None, token=""):
                 file.write("deviance after previous iteration = {}"
                            .format(deviance_previous_iteration))
         not_calculations_time += time.time() - writing_start_time
-        deviance, beta_update, iteration_not_calculation_time = make_iteration(beta, client)
-        not_calculations_time += iteration_not_calculation_time
-        beta += beta_update
+        try:
+            deviance, beta_update, iteration_not_calculation_time = make_iteration(beta, client)
+            not_calculations_time += iteration_not_calculation_time
+            beta += beta_update
+        except np.linalg.LinAlgError as err:
+            if 'Singular matrix' in str(err):
+                error = "singular_matrix"
+                write_error_information(result_file, error)
+            else:
+                raise Exception("New Error in linalg")
+            return
+
     running_time = time.time() - start_time - not_calculations_time
     beta = np.array(beta.T)
     if result_file is not None:
